@@ -10,19 +10,16 @@ return new class extends Migration
     {
         Schema::create('portfolio_sections', function (Blueprint $table) {
             $table->id();
-
-            $table->unsignedBigInteger('user_id');
             $table->unsignedBigInteger('portfolio_id');
 
             $table->enum('section_type', ['system', 'custom'])->default('system');
+            $table->string('system_key', 100)->nullable();    // hero, about, projects, skills
+            $table->string('custom_slug', 150)->nullable();   // user defined slug for custom section
 
-            $table->string('system_key')->nullable();   // hero, about, projects...
-            $table->string('custom_slug')->nullable();  // user-defined unique slug for custom section
-
-            $table->string('section_name');
-            $table->string('layout_key')->nullable();   // grid, cards, timeline, split, masonry
+            $table->string('section_name', 150);
+            $table->string('layout_key', 100)->nullable();
             $table->text('intro_text')->nullable();
-            $table->json('config')->nullable();         // colors, columns, spacing, card type, etc.
+            $table->json('config')->nullable();
 
             $table->integer('sort_order')->default(0);
             $table->boolean('is_enabled')->default(true);
@@ -34,8 +31,9 @@ return new class extends Migration
             $table->unique(['portfolio_id', 'system_key'], 'ps_portfolio_system_key_unique');
             $table->unique(['portfolio_id', 'custom_slug'], 'ps_portfolio_custom_slug_unique');
 
-            $table->index(['user_id', 'portfolio_id'], 'ps_user_portfolio_idx');
             $table->index(['portfolio_id', 'sort_order'], 'ps_portfolio_sort_idx');
+            $table->index(['portfolio_id', 'is_enabled'], 'ps_portfolio_enabled_idx');
+            $table->index('section_type', 'ps_section_type_idx');
         });
     }
 

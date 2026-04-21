@@ -13,6 +13,7 @@ return new class extends Migration
             $table->unsignedBigInteger('created_by')->nullable()->after('role');
             $table->boolean('is_active')->default(true)->after('created_by');
             $table->timestamp('last_login_at')->nullable()->after('is_active');
+            $table->softDeletes();
 
             $table->index('created_by', 'users_created_by_idx');
             $table->index(['role', 'is_active'], 'users_role_is_active_idx');
@@ -24,6 +25,7 @@ return new class extends Migration
         Schema::table('users', function (Blueprint $table) {
             $table->dropIndex('users_created_by_idx');
             $table->dropIndex('users_role_is_active_idx');
+            $table->dropSoftDeletes();
 
             $table->dropColumn([
                 'role',

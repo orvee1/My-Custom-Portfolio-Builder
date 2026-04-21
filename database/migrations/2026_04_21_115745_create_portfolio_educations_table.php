@@ -10,19 +10,18 @@ return new class extends Migration
     {
         Schema::create('portfolio_educations', function (Blueprint $table) {
             $table->id();
-
-            $table->unsignedBigInteger('user_id');
             $table->unsignedBigInteger('portfolio_id');
 
-            $table->string('institution_name');
-            $table->string('degree')->nullable();
-            $table->string('field_of_study')->nullable();
-            $table->string('institution_logo')->nullable();
+            $table->string('institution_name', 180);
+            $table->string('degree', 180)->nullable();
+            $table->string('field_of_study', 180)->nullable();
+            $table->string('institution_logo', 255)->nullable();
 
             $table->date('start_date')->nullable();
             $table->date('end_date')->nullable();
+            $table->boolean('is_current')->default(false);
 
-            $table->string('grade')->nullable();
+            $table->string('grade', 100)->nullable();
             $table->text('description')->nullable();
 
             $table->integer('sort_order')->default(0);
@@ -31,8 +30,9 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
-            $table->index(['user_id', 'portfolio_id'], 'pedu_user_portfolio_idx');
             $table->index(['portfolio_id', 'sort_order'], 'pedu_portfolio_sort_idx');
+            $table->index(['portfolio_id', 'is_current'], 'pedu_portfolio_current_idx');
+            $table->index(['portfolio_id', 'is_enabled'], 'pedu_portfolio_enabled_idx');
         });
     }
 

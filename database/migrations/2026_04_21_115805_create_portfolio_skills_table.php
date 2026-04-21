@@ -10,15 +10,13 @@ return new class extends Migration
     {
         Schema::create('portfolio_skills', function (Blueprint $table) {
             $table->id();
-
-            $table->unsignedBigInteger('user_id');
             $table->unsignedBigInteger('portfolio_id');
 
-            $table->string('category')->nullable(); // frontend, backend, tools, soft-skills
-            $table->string('name');
+            $table->string('category', 100)->nullable();
+            $table->string('name', 120);
             $table->unsignedTinyInteger('proficiency')->nullable(); // 1-100
             $table->decimal('years_of_experience', 4, 1)->nullable();
-            $table->string('icon')->nullable();
+            $table->string('icon', 255)->nullable();
 
             $table->boolean('is_highlighted')->default(false);
             $table->boolean('is_enabled')->default(true);
@@ -27,9 +25,10 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
-            $table->index(['user_id', 'portfolio_id'], 'pskill_user_portfolio_idx');
             $table->index(['portfolio_id', 'category'], 'pskill_portfolio_category_idx');
             $table->index(['portfolio_id', 'sort_order'], 'pskill_portfolio_sort_idx');
+            $table->index(['portfolio_id', 'is_highlighted'], 'pskill_portfolio_highlighted_idx');
+            $table->index(['portfolio_id', 'is_enabled'], 'pskill_portfolio_enabled_idx');
         });
     }
 

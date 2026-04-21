@@ -10,14 +10,12 @@ return new class extends Migration
     {
         Schema::create('portfolio_projects', function (Blueprint $table) {
             $table->id();
-
-            $table->unsignedBigInteger('user_id');
             $table->unsignedBigInteger('portfolio_id');
 
-            $table->string('title');
-            $table->string('slug');
-            $table->string('project_type')->nullable(); // web, mobile, uiux, branding, backend
-            $table->string('category')->nullable();
+            $table->string('title', 180);
+            $table->string('slug', 180);
+            $table->string('project_type', 100)->nullable();
+            $table->string('category', 100)->nullable();
 
             $table->text('short_description')->nullable();
             $table->longText('long_description')->nullable();
@@ -26,17 +24,17 @@ return new class extends Migration
             $table->text('solution_summary')->nullable();
             $table->text('result_summary')->nullable();
 
-            $table->string('client_name')->nullable();
-            $table->string('project_url')->nullable();
-            $table->string('github_url')->nullable();
-            $table->string('figma_url')->nullable();
-            $table->string('case_study_url')->nullable();
+            $table->string('client_name', 150)->nullable();
+            $table->string('project_url', 500)->nullable();
+            $table->string('github_url', 500)->nullable();
+            $table->string('figma_url', 500)->nullable();
+            $table->string('case_study_url', 500)->nullable();
 
             $table->date('started_at')->nullable();
             $table->date('ended_at')->nullable();
 
-            $table->string('thumbnail')->nullable();
-            $table->string('banner_image')->nullable();
+            $table->string('thumbnail', 255)->nullable();
+            $table->string('banner_image', 255)->nullable();
             $table->json('gallery')->nullable();
             $table->json('tech_stack')->nullable();
             $table->json('metrics')->nullable();
@@ -49,10 +47,9 @@ return new class extends Migration
             $table->softDeletes();
 
             $table->unique(['portfolio_id', 'slug'], 'pp_portfolio_slug_unique');
-
-            $table->index(['user_id', 'portfolio_id'], 'pp_user_portfolio_idx');
             $table->index(['portfolio_id', 'is_featured'], 'pp_portfolio_featured_idx');
             $table->index(['portfolio_id', 'sort_order'], 'pp_portfolio_sort_idx');
+            $table->index(['portfolio_id', 'is_enabled'], 'pp_portfolio_enabled_idx');
         });
     }
 

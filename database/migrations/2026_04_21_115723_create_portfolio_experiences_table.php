@@ -10,15 +10,13 @@ return new class extends Migration
     {
         Schema::create('portfolio_experiences', function (Blueprint $table) {
             $table->id();
-
-            $table->unsignedBigInteger('user_id');
             $table->unsignedBigInteger('portfolio_id');
 
-            $table->string('company_name');
-            $table->string('job_title');
-            $table->string('employment_type')->nullable(); // full-time, part-time, freelance
-            $table->string('location')->nullable();
-            $table->string('company_logo')->nullable();
+            $table->string('company_name', 180);
+            $table->string('job_title', 180);
+            $table->string('employment_type', 100)->nullable();
+            $table->string('location', 150)->nullable();
+            $table->string('company_logo', 255)->nullable();
 
             $table->date('start_date')->nullable();
             $table->date('end_date')->nullable();
@@ -33,8 +31,9 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
-            $table->index(['user_id', 'portfolio_id'], 'pe_user_portfolio_idx');
             $table->index(['portfolio_id', 'sort_order'], 'pe_portfolio_sort_idx');
+            $table->index(['portfolio_id', 'is_current'], 'pe_portfolio_current_idx');
+            $table->index(['portfolio_id', 'is_enabled'], 'pe_portfolio_enabled_idx');
         });
     }
 
