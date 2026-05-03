@@ -4,31 +4,21 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\User\StoreUserRequest;
 use App\Http\Requests\Admin\User\UpdateUserRequest;
+use App\Models\PortFolio;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class UserController extends Controller
 {
-    public function __construct()
-    {
-        abort_unless(auth()->check(), 403);
-    }
-
-    protected function ensureSuperAdmin(): void
-    {
-        abort_unless(auth()->user()?->isSuperAdmin(), 403);
-    }
-
     public function index(Request $request): View
     {
-        $this->ensureSuperAdmin();
-
         $users = User::query()
-            ->with('creator:id,name')
-            ->where('role', 'admin') // this module manages admin users only
+            ->with(['creator:id,name', 'portfolio:id,user_id,status'])
+            ->where('role', 'admin')
             ->when($request->filled('search'), function ($query) use ($request) {
                 $search = trim((string) $request->search);
 
@@ -53,23 +43,33 @@ class UserController extends Controller
 
     public function create(): View
     {
-        $this->ensureSuperAdmin();
-
         return view('admin.users.create');
     }
 
     public function store(StoreUserRequest $request): RedirectResponse
     {
-        $this->ensureSuperAdmin();
-
         DB::transaction(function () use ($request) {
-            User::create([
+            $user = User::create([
                 'name'       => trim($request->name),
                 'email'      => strtolower(trim($request->email)),
                 'password'   => $request->password,
                 'role'       => 'admin',
                 'created_by' => auth()->id(),
-                'is_active'  => $request->boolean('is_active', true),
+                'is_active'  => $request->boolean('is_active'),
+            ]);
+
+            PortFolio::create([
+                'user_id'                 => $user->id,
+                'slug'                    => $this->generateUniquePortfolioSlug($user->name),
+                'portfolio_title'         => $user->name . "'s Portfolio",
+                'full_name'               => $user->name,
+                'email'                   => $user->email,
+                'status'                  => 'draft',
+                'is_public'               => false,
+                'template_key'            => 'premium_modern',
+                'resume_download_enabled' => true,
+                'contact_form_enabled'    => true,
+                'show_social_links'       => true,
             ]);
         });
 
@@ -80,8 +80,6 @@ class UserController extends Controller
 
     public function edit(User $user): View
     {
-        $this->ensureSuperAdmin();
-
         abort_if($user->role !== 'admin', 404);
 
         return view('admin.users.edit', compact('user'));
@@ -89,31 +87,35 @@ class UserController extends Controller
 
     public function update(UpdateUserRequest $request, User $user): RedirectResponse
     {
-        $this->ensureSuperAdmin();
-
         abort_if($user->role !== 'admin', 404);
 
-        if ($user->id === auth()->id()) {
-            return back()
-                ->withErrors([
-                    'user' => 'Use the profile page to update your own account.',
-                ])
-                ->withInput();
-        }
+        $email = strtolower(trim($request->email));
 
         $data = [
             'name'      => trim($request->name),
-            'email'     => strtolower(trim($request->email)),
+            'email'     => $email,
             'is_active' => $request->boolean('is_active'),
             'role'      => 'admin',
         ];
+
+        if ($user->email !== $email) {
+            $data['email_verified_at'] = null;
+        }
 
         if ($request->filled('password')) {
             $data['password'] = $request->password;
         }
 
         DB::transaction(function () use ($user, $data) {
-            $user->update($data);
+            $user->forceFill($data)->save();
+
+            if ($user->portfolio) {
+                $user->portfolio->update([
+                    'full_name'               => $user->name,
+                    'email'                   => $user->email,
+                    'last_content_updated_at' => now(),
+                ]);
+            }
         });
 
         return redirect()
@@ -123,18 +125,14 @@ class UserController extends Controller
 
     public function destroy(User $user): RedirectResponse
     {
-        $this->ensureSuperAdmin();
-
         abort_if($user->role !== 'admin', 404);
-
-        if ($user->id === auth()->id()) {
-            return back()->withErrors([
-                'user' => 'You cannot delete your own account.',
-            ]);
-        }
 
         DB::transaction(function () use ($user) {
             $user->delete();
+
+            if ($user->portfolio) {
+                $user->portfolio->delete();
+            }
         });
 
         return redirect()
@@ -144,15 +142,7 @@ class UserController extends Controller
 
     public function toggleStatus(User $user): RedirectResponse
     {
-        $this->ensureSuperAdmin();
-
         abort_if($user->role !== 'admin', 404);
-
-        if ($user->id === auth()->id()) {
-            return back()->withErrors([
-                'user' => 'You cannot change your own active status.',
-            ]);
-        }
 
         DB::transaction(function () use ($user) {
             $user->update([
@@ -163,5 +153,24 @@ class UserController extends Controller
         return redirect()
             ->route('admin.users.index')
             ->with('success', 'Admin user status updated successfully.');
+    }
+
+    private function generateUniquePortfolioSlug(string $name): string
+    {
+        $baseSlug = Str::slug($name);
+
+        if (! $baseSlug) {
+            $baseSlug = 'portfolio';
+        }
+
+        $slug    = $baseSlug;
+        $counter = 1;
+
+        while (Portfolio::query()->where('slug', $slug)->exists()) {
+            $slug = $baseSlug . '-' . $counter;
+            $counter++;
+        }
+
+        return $slug;
     }
 }

@@ -1,7 +1,10 @@
 @csrf
+
 @if (isset($user))
     @method('PUT')
 @endif
+
+<input type="hidden" name="is_active" value="0">
 
 <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
     <div>
@@ -28,10 +31,11 @@
 
     <div class="md:col-span-2">
         <label class="inline-flex items-center gap-2">
-            <input type="checkbox" name="is_active" value="1" @checked(old('is_active', isset($user) ? $user->is_active : true))
+            <input type="checkbox" name="is_active" value="1" @checked(old('is_active', isset($user) ? (int) $user->is_active : 1))
                 class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-            <span class="text-sm font-medium text-gray-700">Active user</span>
+            <span class="text-sm font-medium text-gray-700">Active admin user</span>
         </label>
+
         @error('is_active')
             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
         @enderror
@@ -43,9 +47,11 @@
         </label>
         <input type="password" name="password"
             class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200">
+
         @if (isset($user))
             <p class="mt-1 text-xs text-gray-500">Leave blank to keep the current password.</p>
         @endif
+
         @error('password')
             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
         @enderror

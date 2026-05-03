@@ -16,18 +16,6 @@
             </a>
         </div>
 
-        @if (session('success'))
-            <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-                {{ session('success') }}
-            </div>
-        @endif
-
-        @if ($errors->has('user'))
-            <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {{ $errors->first('user') }}
-            </div>
-        @endif
-
         <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
             <form method="GET" action="{{ route('admin.users.index') }}" class="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <div>
@@ -74,6 +62,8 @@
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
                                 Created By</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                                Portfolio</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
                                 Last Login</th>
                             <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">
                                 Actions</th>
@@ -103,6 +93,17 @@
                                 </td>
 
                                 <td class="px-4 py-4 text-sm text-gray-600">
+                                    @if ($user->portfolio)
+                                        <span
+                                            class="inline-flex rounded-full bg-indigo-100 px-2.5 py-1 text-xs font-semibold text-indigo-700">
+                                            {{ ucfirst($user->portfolio->status) }}
+                                        </span>
+                                    @else
+                                        <span class="text-red-500">Missing</span>
+                                    @endif
+                                </td>
+
+                                <td class="px-4 py-4 text-sm text-gray-600">
                                     {{ $user->last_login_at?->format('d M Y, h:i A') ?? 'Never' }}
                                 </td>
 
@@ -123,7 +124,7 @@
                                         </form>
 
                                         <form method="POST" action="{{ route('admin.users.destroy', $user) }}"
-                                            onsubmit="return confirm('Are you sure you want to delete this admin user?')">
+                                            onsubmit="return confirm('Are you sure you want to delete this admin user? This will also soft-delete the related portfolio.')">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit"
@@ -136,7 +137,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="px-4 py-10 text-center text-sm text-gray-500">
+                                <td colspan="7" class="px-4 py-10 text-center text-sm text-gray-500">
                                     No admin users found.
                                 </td>
                             </tr>

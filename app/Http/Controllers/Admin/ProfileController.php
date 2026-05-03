@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
@@ -21,17 +22,27 @@ class ProfileController extends Controller
     {
         $user = $request->user();
 
+        $email = strtolower(trim($request->email));
+
         $data = [
-            'name'  => trim($request->name),
-            'email' => strtolower(trim($request->email)),
+            'name' => trim($request->name),
+            'email' => $email,
         ];
 
-        if ($user->email !== $data['email']) {
+        if ($user->email !== $email) {
             $data['email_verified_at'] = null;
         }
 
         DB::transaction(function () use ($user, $data) {
-            $user->update($data);
+            $user->forceFill($data)->save();
+
+            if ($user->portfolio) {
+                $user->portfolio->update([
+                    'full_name' => $user->name,
+                    'email' => $user->email,
+                    'last_content_updated_at' => now(),
+                ]);
+            }
         });
 
         return redirect()
@@ -44,9 +55,9 @@ class ProfileController extends Controller
         $user = $request->user();
 
         DB::transaction(function () use ($user, $request) {
-            $user->update([
+            $user->forceFill([
                 'password' => $request->password,
-            ]);
+            ])->save();
         });
 
         return redirect()
