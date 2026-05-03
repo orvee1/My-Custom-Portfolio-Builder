@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Middleware;
 
 use Closure;
@@ -9,7 +10,10 @@ class EnsureSuperAdmin
 {
     public function handle(Request $request, Closure $next): Response
     {
-        abort_unless(auth()->check() && auth()->user()->role === 'super_admin', 403);
+        abort_unless(
+            auth()->check() && auth()->user()->isSuperAdmin(),
+            403
+        );
 
         return $next($request);
     }

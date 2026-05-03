@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Requests\Admin\User;
 
 use Illuminate\Foundation\Http\FormRequest;
@@ -17,16 +18,15 @@ class UpdateUserRequest extends FormRequest
         $user = $this->route('user');
 
         return [
-            'name'      => ['required', 'string', 'max:255'],
-            'email'     => [
+            'name' => ['required', 'string', 'max:255'],
+            'email' => [
                 'required',
                 'string',
                 'email:rfc,dns',
                 'max:255',
                 Rule::unique('users', 'email')->ignore($user?->id),
             ],
-            'password'  => ['nullable', 'confirmed', Password::defaults()],
-            'role'      => ['required', Rule::in(['admin', 'super_admin'])],
+            'password' => ['nullable', 'confirmed', Password::defaults()],
             'is_active' => ['nullable', 'boolean'],
         ];
     }
