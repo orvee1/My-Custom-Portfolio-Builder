@@ -1,10 +1,7 @@
 <?php
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -15,26 +12,24 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 
-#[Fillable(['name', 'email', 'password'])]
-#[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, TwoFactorAuthenticatable, SoftDeletes;
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-
     protected $fillable = [
         'name',
         'email',
+        'email_verified_at',
         'password',
         'role',
         'created_by',
         'is_active',
+        'approval_status',
+        'approved_at',
+        'approved_by',
+        'rejected_at',
+        'rejection_reason',
         'last_login_at',
     ];
 
@@ -52,13 +47,12 @@ class User extends Authenticatable
             'last_login_at'           => 'datetime',
             'two_factor_confirmed_at' => 'datetime',
             'is_active'               => 'boolean',
+            'approved_at'             => 'datetime',
+            'rejected_at'             => 'datetime',
             'password'                => 'hashed',
         ];
     }
 
-    /**
-     * Get the user's initials
-     */
     public function initials(): string
     {
         return Str::of($this->name)
@@ -73,6 +67,11 @@ class User extends Authenticatable
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    public function approver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
     public function createdUsers(): HasMany
     {
         return $this->hasMany(User::class, 'created_by');
@@ -80,7 +79,7 @@ class User extends Authenticatable
 
     public function portfolio(): HasOne
     {
-        return $this->hasOne(PortFolio::class, 'user_id');
+        return $this->hasOne(Portfolio::class, 'user_id');
     }
 
     public function isSuperAdmin(): bool
@@ -93,6 +92,26 @@ class User extends Authenticatable
         return $this->role === 'admin';
     }
 
+    public function isPendingApproval(): bool
+    {
+        return $this->approval_status === 'pending';
+    }
+
+    public function isApproved(): bool
+    {
+        return $this->approval_status === 'approved';
+    }
+
+    public function isRejected(): bool
+    {
+        return $this->approval_status === 'rejected';
+    }
+
+    public function canAccessAdminPanel(): bool
+    {
+        return $this->is_active && $this->isApproved();
+    }
+
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
@@ -101,5 +120,10 @@ class User extends Authenticatable
     public function scopeAdminUsers($query)
     {
         return $query->where('role', 'admin');
+    }
+
+    public function scopePendingApproval($query)
+    {
+        return $query->where('approval_status', 'pending');
     }
 }

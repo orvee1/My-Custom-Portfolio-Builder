@@ -77,5 +77,7 @@ Route::middleware(['auth', 'active_user'])->prefix('admin')->name('admin.')->gro
         Route::patch('/users/{user}/toggle-status', [UserController::class, 'toggleStatus'])->name('users.toggle-status');
         Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
         Route::get('/portfolios', [PortfolioController::class, 'index'])->name('portfolios.index');
+        Route::patch('/users/{user}/approve', [UserController::class, 'approve'])->name('users.approve');
+        Route::patch('/users/{user}/reject', [UserController::class, 'reject'])->name('users.reject');
     });
 });

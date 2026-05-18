@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Actions\Fortify;
 
 use App\Concerns\PasswordValidationRules;
@@ -20,14 +19,25 @@ class CreateNewUser implements CreatesNewUsers
     public function create(array $input): User
     {
         Validator::make($input, [
-            ...$this->profileRules(),
+             ...$this->profileRules(),
             'password' => $this->passwordRules(),
         ])->validate();
 
         return User::create([
-            'name' => $input['name'],
-            'email' => $input['email'],
-            'password' => $input['password'],
+            'name'             => trim($input['name']),
+            'email'            => strtolower(trim($input['email'])),
+            'password'         => $input['password'],
+
+            // Public registrations become admin users,
+            // but they cannot log in until super admin approves them.
+            'role'             => 'admin',
+            'created_by'       => null,
+            'is_active'        => false,
+            'approval_status'  => 'pending',
+            'approved_at'      => null,
+            'approved_by'      => null,
+            'rejected_at'      => null,
+            'rejection_reason' => null,
         ]);
     }
 }

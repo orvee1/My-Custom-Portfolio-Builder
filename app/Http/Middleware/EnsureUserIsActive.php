@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Middleware;
 
 use Closure;
@@ -11,7 +10,19 @@ class EnsureUserIsActive
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (auth()->check() && ! auth()->user()->is_active) {
+        if (auth()->check() && ! auth()->user()->canAccessAdminPanel()) {
+            $message = 'Your account is inactive. Please contact the super admin.';
+
+            if (auth()->user()->isPendingApproval()) {
+                $message = 'Your account is waiting for super admin approval.';
+            }
+
+            if (auth()->user()->isRejected()) {
+                $message = auth()->user()->rejection_reason
+                    ? 'Your account request was rejected. Reason: ' . auth()->user()->rejection_reason
+                    : 'Your account request was rejected. Please contact support.';
+            }
+
             Auth::guard('web')->logout();
 
             $request->session()->invalidate();
@@ -20,7 +31,7 @@ class EnsureUserIsActive
             return redirect()
                 ->route('login')
                 ->withErrors([
-                    'email' => 'Your account is inactive. Please contact the super admin.',
+                    'email' => $message,
                 ]);
         }
 

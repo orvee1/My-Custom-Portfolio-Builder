@@ -4,20 +4,34 @@
 
 @section('content')
     <div class="space-y-6">
-        <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-                <h1 class="text-2xl font-bold text-gray-900">Admin Users</h1>
-                <p class="text-sm text-gray-500">Manage admin accounts for the portfolio builder.</p>
-            </div>
+        <div class="rounded-3xl bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-600 p-6 text-white shadow-lg">
+            <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                    <p class="text-sm font-semibold uppercase tracking-[0.25em] text-indigo-100">
+                        User Management
+                    </p>
+                    <h1 class="mt-2 text-3xl font-black">Admin Users</h1>
+                    <p class="mt-2 text-sm text-indigo-100">
+                        Approve new registrations, manage admins, and control portfolio access.
+                    </p>
+                </div>
 
-            <a href="{{ route('admin.users.create') }}"
-                class="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
-                + Add Admin
-            </a>
+                <div class="flex flex-wrap gap-3">
+                    <a href="{{ route('admin.users.index', ['approval_status' => 'pending']) }}"
+                        class="rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-bold text-white backdrop-blur hover:bg-white/20">
+                        Pending: {{ $pendingCount ?? 0 }}
+                    </a>
+
+                    <a href="{{ route('admin.users.create') }}"
+                        class="rounded-2xl bg-white px-5 py-3 text-sm font-black text-indigo-700 shadow hover:bg-indigo-50">
+                        + Add Admin
+                    </a>
+                </div>
+            </div>
         </div>
 
         <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-            <form method="GET" action="{{ route('admin.users.index') }}" class="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <form method="GET" action="{{ route('admin.users.index') }}" class="grid grid-cols-1 gap-4 md:grid-cols-4">
                 <div>
                     <label class="mb-1 block text-sm font-medium text-gray-700">Search</label>
                     <input type="text" name="search" value="{{ request('search') }}" placeholder="Name or email"
@@ -25,7 +39,18 @@
                 </div>
 
                 <div>
-                    <label class="mb-1 block text-sm font-medium text-gray-700">Status</label>
+                    <label class="mb-1 block text-sm font-medium text-gray-700">Approval</label>
+                    <select name="approval_status"
+                        class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200">
+                        <option value="">All</option>
+                        <option value="pending" @selected(request('approval_status') === 'pending')>Pending</option>
+                        <option value="approved" @selected(request('approval_status') === 'approved')>Approved</option>
+                        <option value="rejected" @selected(request('approval_status') === 'rejected')>Rejected</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="mb-1 block text-sm font-medium text-gray-700">Account Status</label>
                     <select name="status"
                         class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200">
                         <option value="">All</option>
@@ -54,15 +79,15 @@
                     <thead class="bg-gray-50">
                         <tr>
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                                Name</th>
+                                User</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                                Email</th>
+                                Approval</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                                Status</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                                Created By</th>
+                                Account</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
                                 Portfolio</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                                Approved By</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
                                 Last Login</th>
                             <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">
@@ -74,22 +99,49 @@
                         @forelse($users as $user)
                             <tr>
                                 <td class="px-4 py-4">
-                                    <div class="font-medium text-gray-900">{{ $user->name }}</div>
+                                    <div class="flex items-center gap-3">
+                                        <div
+                                            class="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-100 font-black text-indigo-700">
+                                            {{ strtoupper(substr($user->name, 0, 1)) }}
+                                        </div>
+
+                                        <div>
+                                            <div class="font-semibold text-gray-900">{{ $user->name }}</div>
+                                            <div class="text-sm text-gray-500">{{ $user->email }}</div>
+                                        </div>
+                                    </div>
                                 </td>
 
-                                <td class="px-4 py-4 text-sm text-gray-600">
-                                    {{ $user->email }}
+                                <td class="px-4 py-4">
+                                    @if ($user->approval_status === 'approved')
+                                        <span
+                                            class="inline-flex rounded-full bg-green-100 px-2.5 py-1 text-xs font-bold text-green-700">
+                                            Approved
+                                        </span>
+                                    @elseif($user->approval_status === 'pending')
+                                        <span
+                                            class="inline-flex rounded-full bg-yellow-100 px-2.5 py-1 text-xs font-bold text-yellow-700">
+                                            Pending
+                                        </span>
+                                    @else
+                                        <span
+                                            class="inline-flex rounded-full bg-red-100 px-2.5 py-1 text-xs font-bold text-red-700">
+                                            Rejected
+                                        </span>
+                                    @endif
+
+                                    @if ($user->rejection_reason)
+                                        <p class="mt-1 max-w-xs text-xs text-red-500">
+                                            {{ $user->rejection_reason }}
+                                        </p>
+                                    @endif
                                 </td>
 
                                 <td class="px-4 py-4">
                                     <span
-                                        class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold {{ $user->is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">
+                                        class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold {{ $user->is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600' }}">
                                         {{ $user->is_active ? 'Active' : 'Inactive' }}
                                     </span>
-                                </td>
-
-                                <td class="px-4 py-4 text-sm text-gray-600">
-                                    {{ $user->creator?->name ?? 'System' }}
                                 </td>
 
                                 <td class="px-4 py-4 text-sm text-gray-600">
@@ -99,8 +151,12 @@
                                             {{ ucfirst($user->portfolio->status) }}
                                         </span>
                                     @else
-                                        <span class="text-red-500">Missing</span>
+                                        <span class="text-gray-400">Not created yet</span>
                                     @endif
+                                </td>
+
+                                <td class="px-4 py-4 text-sm text-gray-600">
+                                    {{ $user->approver?->name ?? '-' }}
                                 </td>
 
                                 <td class="px-4 py-4 text-sm text-gray-600">
@@ -108,25 +164,55 @@
                                 </td>
 
                                 <td class="px-4 py-4">
-                                    <div class="flex items-center justify-end gap-2">
+                                    <div class="flex flex-wrap items-center justify-end gap-2">
+                                        @if ($user->approval_status === 'pending')
+                                            <form method="POST" action="{{ route('admin.users.approve', $user) }}">
+                                                @csrf
+                                                @method('PATCH')
+
+                                                <button type="submit"
+                                                    class="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-green-700">
+                                                    Approve
+                                                </button>
+                                            </form>
+
+                                            <form method="POST" action="{{ route('admin.users.reject', $user) }}"
+                                                onsubmit="return confirm('Reject this registration request?')">
+                                                @csrf
+                                                @method('PATCH')
+
+                                                <input type="hidden" name="rejection_reason"
+                                                    value="Registration request rejected by super admin.">
+
+                                                <button type="submit"
+                                                    class="rounded-lg border border-red-300 px-3 py-1.5 text-xs font-bold text-red-700 hover:bg-red-50">
+                                                    Reject
+                                                </button>
+                                            </form>
+                                        @endif
+
                                         <a href="{{ route('admin.users.edit', $user) }}"
                                             class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50">
                                             Edit
                                         </a>
 
-                                        <form method="POST" action="{{ route('admin.users.toggle-status', $user) }}">
-                                            @csrf
-                                            @method('PATCH')
-                                            <button type="submit"
-                                                class="rounded-lg border border-amber-300 px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-50">
-                                                {{ $user->is_active ? 'Deactivate' : 'Activate' }}
-                                            </button>
-                                        </form>
+                                        @if ($user->approval_status === 'approved')
+                                            <form method="POST" action="{{ route('admin.users.toggle-status', $user) }}">
+                                                @csrf
+                                                @method('PATCH')
+
+                                                <button type="submit"
+                                                    class="rounded-lg border border-amber-300 px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-50">
+                                                    {{ $user->is_active ? 'Deactivate' : 'Activate' }}
+                                                </button>
+                                            </form>
+                                        @endif
 
                                         <form method="POST" action="{{ route('admin.users.destroy', $user) }}"
-                                            onsubmit="return confirm('Are you sure you want to delete this admin user? This will also soft-delete the related portfolio.')">
+                                            onsubmit="return confirm('Are you sure you want to delete this admin user?')">
                                             @csrf
                                             @method('DELETE')
+
                                             <button type="submit"
                                                 class="rounded-lg border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50">
                                                 Delete

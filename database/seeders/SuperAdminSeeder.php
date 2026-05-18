@@ -11,11 +11,14 @@ class SuperAdminSeeder extends Seeder
         User::updateOrCreate(
             ['email' => 'orvee.imrul32@gmail.com'],
             [
-                'name'       => 'Imrul Ibtehaz',
-                'password'   => '12345678',
-                'role'       => 'super_admin',
-                'is_active'  => true,
-                'created_by' => null,
+                'name'            => 'Imrul Ibtehaz',
+                'password'        => '12345678',
+                'role'            => 'super_admin',
+                'is_active'       => true,
+                'approval_status' => 'approved',
+                'approved_at'     => now(),
+                'approved_by'     => null,
+                'created_by'      => null,
             ]
         );
     }

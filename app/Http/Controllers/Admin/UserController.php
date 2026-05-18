@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
@@ -18,7 +17,7 @@ class UserController extends Controller
     public function index(Request $request): View
     {
         $users = User::query()
-            ->with(['creator:id,name', 'portfolio:id,user_id,status'])
+            ->with(['creator:id,name', 'approver:id,name', 'portfolio:id,user_id,status'])
             ->where('role', 'admin')
             ->when($request->filled('search'), function ($query) use ($request) {
                 $search = trim((string) $request->search);
@@ -27,6 +26,9 @@ class UserController extends Controller
                     $subQuery->where('name', 'like', "%{$search}%")
                         ->orWhere('email', 'like', "%{$search}%");
                 });
+            })
+            ->when($request->filled('approval_status'), function ($query) use ($request) {
+                $query->where('approval_status', $request->approval_status);
             })
             ->when($request->filled('status'), function ($query) use ($request) {
                 if ($request->status === 'active') {
@@ -39,7 +41,12 @@ class UserController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        return view('admin.users.index', compact('users'));
+        $pendingCount = User::query()
+            ->where('role', 'admin')
+            ->where('approval_status', 'pending')
+            ->count();
+
+        return view('admin.users.index', compact('users', 'pendingCount'));
     }
 
     public function create(): View
@@ -51,27 +58,20 @@ class UserController extends Controller
     {
         DB::transaction(function () use ($request) {
             $user = User::create([
-                'name' => trim($request->name),
-                'email' => strtolower(trim($request->email)),
-                'password' => $request->password,
-                'role' => 'admin',
-                'created_by' => auth()->id(),
-                'is_active' => $request->boolean('is_active'),
+                'name'             => trim($request->name),
+                'email'            => strtolower(trim($request->email)),
+                'password'         => $request->password,
+                'role'             => 'admin',
+                'created_by'       => auth()->id(),
+                'is_active'        => $request->boolean('is_active'),
+                'approval_status'  => 'approved',
+                'approved_at'      => now(),
+                'approved_by'      => auth()->id(),
+                'rejected_at'      => null,
+                'rejection_reason' => null,
             ]);
 
-            Portfolio::create([
-                'user_id' => $user->id,
-                'slug' => $this->generateUniquePortfolioSlug($user->name),
-                'portfolio_title' => $user->name."'s Portfolio",
-                'full_name' => $user->name,
-                'email' => $user->email,
-                'status' => 'draft',
-                'is_public' => false,
-                'template_key' => 'premium_modern',
-                'resume_download_enabled' => true,
-                'contact_form_enabled' => true,
-                'show_social_links' => true,
-            ]);
+            $this->createDefaultPortfolio($user);
         });
 
         return redirect()
@@ -93,10 +93,10 @@ class UserController extends Controller
         $email = strtolower(trim($request->email));
 
         $data = [
-            'name' => trim($request->name),
-            'email' => $email,
+            'name'      => trim($request->name),
+            'email'     => $email,
             'is_active' => $request->boolean('is_active'),
-            'role' => 'admin',
+            'role'      => 'admin',
         ];
 
         if ($user->email !== $email) {
@@ -112,8 +112,8 @@ class UserController extends Controller
 
             if ($user->portfolio) {
                 $user->portfolio->update([
-                    'full_name' => $user->name,
-                    'email' => $user->email,
+                    'full_name'               => $user->name,
+                    'email'                   => $user->email,
                     'last_content_updated_at' => now(),
                 ]);
             }
@@ -122,6 +122,54 @@ class UserController extends Controller
         return redirect()
             ->route('admin.users.index')
             ->with('success', 'Admin user updated successfully.');
+    }
+
+    public function approve(User $user): RedirectResponse
+    {
+        abort_if($user->role !== 'admin', 404);
+
+        if ($user->isApproved()) {
+            return back()->with('success', 'This user is already approved.');
+        }
+
+        DB::transaction(function () use ($user) {
+            $user->forceFill([
+                'approval_status'  => 'approved',
+                'is_active'        => true,
+                'approved_at'      => now(),
+                'approved_by'      => auth()->id(),
+                'rejected_at'      => null,
+                'rejection_reason' => null,
+            ])->save();
+
+            $this->createDefaultPortfolio($user);
+        });
+
+        return redirect()
+            ->route('admin.users.index', ['approval_status' => 'pending'])
+            ->with('success', 'User approved successfully. They can now log in.');
+    }
+
+    public function reject(Request $request, User $user): RedirectResponse
+    {
+        abort_if($user->role !== 'admin', 404);
+
+        $validated = $request->validate([
+            'rejection_reason' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        DB::transaction(function () use ($user, $validated) {
+            $user->forceFill([
+                'approval_status'  => 'rejected',
+                'is_active'        => false,
+                'rejected_at'      => now(),
+                'rejection_reason' => $validated['rejection_reason'] ?? null,
+            ])->save();
+        });
+
+        return redirect()
+            ->route('admin.users.index', ['approval_status' => 'pending'])
+            ->with('success', 'User rejected successfully.');
     }
 
     public function destroy(User $user): RedirectResponse
@@ -145,6 +193,12 @@ class UserController extends Controller
     {
         abort_if($user->role !== 'admin', 404);
 
+        if (! $user->isApproved()) {
+            return back()->withErrors([
+                'user' => 'Only approved users can be activated or deactivated.',
+            ]);
+        }
+
         DB::transaction(function () use ($user) {
             $user->update([
                 'is_active' => ! $user->is_active,
@@ -156,6 +210,36 @@ class UserController extends Controller
             ->with('success', 'Admin user status updated successfully.');
     }
 
+    private function createDefaultPortfolio(User $user): void
+    {
+        if ($user->portfolio) {
+            return;
+        }
+
+        Portfolio::create([
+            'user_id'                 => $user->id,
+            'slug'                    => $this->generateUniquePortfolioSlug($user->name),
+            'portfolio_title'         => $user->name . "'s Portfolio",
+            'full_name'               => $user->name,
+            'email'                   => $user->email,
+            'status'                  => 'draft',
+            'is_public'               => false,
+            'template_key'            => 'premium_modern',
+            'accent_color'            => '#4f46e5',
+            'secondary_color'         => '#111827',
+            'font_family'             => 'Inter',
+            'resume_download_enabled' => true,
+            'contact_form_enabled'    => true,
+            'show_social_links'       => true,
+            'theme_settings'          => [
+                'hero_layout'        => 'split',
+                'card_style'         => 'soft',
+                'button_style'       => 'rounded',
+                'show_cover_overlay' => true,
+            ],
+        ]);
+    }
+
     private function generateUniquePortfolioSlug(string $name): string
     {
         $baseSlug = Str::slug($name);
@@ -164,11 +248,11 @@ class UserController extends Controller
             $baseSlug = 'portfolio';
         }
 
-        $slug = $baseSlug;
+        $slug    = $baseSlug;
         $counter = 1;
 
         while (Portfolio::query()->where('slug', $slug)->exists()) {
-            $slug = $baseSlug.'-'.$counter;
+            $slug = $baseSlug . '-' . $counter;
             $counter++;
         }
 
