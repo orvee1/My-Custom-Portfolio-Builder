@@ -15,18 +15,16 @@
 
 <body class="bg-gray-100 text-gray-800 antialiased">
     <div x-data="{ sidebarOpen: false }" class="min-h-screen">
-        <!-- Mobile overlay -->
         <div x-show="sidebarOpen" x-transition.opacity class="fixed inset-0 z-40 bg-black/50 lg:hidden"
             @click="sidebarOpen = false" style="display: none;"></div>
 
-        <!-- Sidebar -->
         <aside
             class="fixed inset-y-0 left-0 z-50 flex w-72 -translate-x-full flex-col border-r border-gray-200 bg-white shadow-xl transition-transform duration-300 lg:translate-x-0"
             :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'">
-            <!-- Brand -->
             <div class="flex h-20 items-center justify-between border-b border-gray-200 px-6">
                 <div>
-                    <a href="{{ url('/admin') }}" class="text-xl font-extrabold tracking-tight text-gray-900">
+                    <a href="{{ route('admin.dashboard') }}"
+                        class="text-xl font-extrabold tracking-tight text-gray-900">
                         Portfolio<span class="text-indigo-600">Admin</span>
                     </a>
                     <p class="mt-1 text-xs text-gray-500">Manage portfolio platform</p>
@@ -39,7 +37,6 @@
                 </button>
             </div>
 
-            <!-- Logged user info -->
             <div class="border-b border-gray-200 px-6 py-5">
                 <div class="flex items-center gap-3">
                     <div
@@ -51,9 +48,11 @@
                         <p class="truncate text-sm font-semibold text-gray-900">
                             {{ auth()->user()->name ?? 'User' }}
                         </p>
+
                         <p class="truncate text-xs text-gray-500">
                             {{ auth()->user()->email ?? '' }}
                         </p>
+
                         <span
                             class="mt-1 inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold
                             {{ auth()->user()?->role === 'super_admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700' }}">
@@ -63,21 +62,22 @@
                 </div>
             </div>
 
-            <!-- Navigation -->
             <nav class="flex-1 overflow-y-auto px-4 py-5">
                 <div class="space-y-1">
                     <p class="px-3 pb-2 text-[11px] font-bold uppercase tracking-[0.2em] text-gray-400">
                         Main
                     </p>
 
-                    <a href="{{ url('/admin') }}"
-                        class="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-gray-700 transition hover:bg-gray-100 hover:text-gray-900">
+                    <a href="{{ route('admin.dashboard') }}"
+                        class="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition
+                       {{ request()->routeIs('admin.dashboard') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900' }}">
                         <span class="text-base">🏠</span>
                         <span>Dashboard</span>
                     </a>
 
                     <a href="{{ route('admin.profile.edit') }}"
-                        class="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-gray-700 transition hover:bg-gray-100 hover:text-gray-900">
+                        class="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition
+                       {{ request()->routeIs('admin.profile.*') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900' }}">
                         <span class="text-base">👤</span>
                         <span>My Profile</span>
                     </a>
@@ -90,10 +90,20 @@
                         </p>
 
                         <a href="{{ route('admin.users.index') }}"
-                            class="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-gray-700 transition hover:bg-gray-100 hover:text-gray-900">
+                            class="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition
+                           {{ request()->routeIs('admin.users.*') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900' }}">
                             <span class="text-base">👥</span>
                             <span>Admin Users</span>
                         </a>
+
+                        @if (Route::has('admin.portfolios.index'))
+                            <a href="{{ route('admin.portfolios.index') }}"
+                                class="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition
+                               {{ request()->routeIs('admin.portfolios.index') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900' }}">
+                                <span class="text-base">🌐</span>
+                                <span>All Portfolios</span>
+                            </a>
+                        @endif
                     </div>
                 @endif
 
@@ -102,32 +112,70 @@
                         Portfolio
                     </p>
 
-                    <a href="#"
-                        class="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-gray-700 transition hover:bg-gray-100 hover:text-gray-900">
-                        <span class="text-base">🗂️</span>
-                        <span>My Portfolio</span>
-                    </a>
+                    @if (Route::has('admin.portfolios.mine'))
+                        <a href="{{ route('admin.portfolios.mine') }}"
+                            class="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition
+                           {{ request()->routeIs('admin.portfolios.mine') || request()->routeIs('admin.portfolios.edit') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900' }}">
+                            <span class="text-base">🗂️</span>
+                            <span>My Portfolio</span>
+                        </a>
+                    @endif
 
-                    <a href="#"
-                        class="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-gray-700 transition hover:bg-gray-100 hover:text-gray-900">
-                        <span class="text-base">📄</span>
-                        <span>Resume / CV</span>
-                    </a>
+                    @php
+                        $currentPortfolio = auth()->user()?->portfolio;
+                    @endphp
 
-                    <a href="#"
-                        class="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-gray-700 transition hover:bg-gray-100 hover:text-gray-900">
-                        <span class="text-base">🧩</span>
-                        <span>Custom Sections</span>
-                    </a>
+                    @if ($currentPortfolio)
+                        <a href="{{ route('admin.portfolios.projects.index', $currentPortfolio) }}"
+                            class="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition
+                           {{ request()->routeIs('admin.portfolios.projects.*') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900' }}">
+                            <span class="text-base">🚀</span>
+                            <span>Projects</span>
+                        </a>
+
+                        <a href="{{ route('admin.portfolios.skills.index', $currentPortfolio) }}"
+                            class="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition
+                           {{ request()->routeIs('admin.portfolios.skills.*') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900' }}">
+                            <span class="text-base">⚡</span>
+                            <span>Skills</span>
+                        </a>
+
+                        <a href="{{ route('admin.portfolios.experiences.index', $currentPortfolio) }}"
+                            class="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition
+                           {{ request()->routeIs('admin.portfolios.experiences.*') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900' }}">
+                            <span class="text-base">💼</span>
+                            <span>Experiences</span>
+                        </a>
+
+                        <a href="{{ route('admin.portfolios.educations.index', $currentPortfolio) }}"
+                            class="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition
+                           {{ request()->routeIs('admin.portfolios.educations.*') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900' }}">
+                            <span class="text-base">🎓</span>
+                            <span>Educations</span>
+                        </a>
+
+                        <a href="{{ route('admin.portfolios.social-links.index', $currentPortfolio) }}"
+                            class="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition
+                           {{ request()->routeIs('admin.portfolios.social-links.*') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900' }}">
+                            <span class="text-base">🔗</span>
+                            <span>Social Links</span>
+                        </a>
+                    @endif
                 </div>
             </nav>
 
-            <!-- Bottom -->
             <div class="border-t border-gray-200 p-4">
-                <a href="{{ url('/') }}" target="_blank"
-                    class="mb-3 flex items-center justify-center rounded-xl border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50">
-                    View Website
-                </a>
+                @if (auth()->user()?->portfolio && auth()->user()->portfolio->isPublished())
+                    <a href="{{ auth()->user()->portfolio->publicUrl() }}" target="_blank"
+                        class="mb-3 flex items-center justify-center rounded-xl border border-green-300 px-4 py-2.5 text-sm font-semibold text-green-700 hover:bg-green-50">
+                        View My Website
+                    </a>
+                @else
+                    <a href="{{ url('/') }}" target="_blank"
+                        class="mb-3 flex items-center justify-center rounded-xl border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50">
+                        View Website
+                    </a>
+                @endif
 
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
@@ -139,9 +187,7 @@
             </div>
         </aside>
 
-        <!-- Main wrapper -->
         <div class="lg:pl-72">
-            <!-- Topbar -->
             <header class="sticky top-0 z-30 border-b border-gray-200 bg-white/90 backdrop-blur">
                 <div class="flex h-20 items-center justify-between px-4 sm:px-6 lg:px-8">
                     <div class="flex items-center gap-3">
@@ -179,7 +225,6 @@
                 </div>
             </header>
 
-            <!-- Page content -->
             <main class="p-4 sm:p-6 lg:p-8">
                 @if (session('success'))
                     <div class="mb-6 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
@@ -210,7 +255,6 @@
 
     @stack('scripts')
 
-    <!-- Alpine.js for sidebar toggle -->
     <script defer src="//unpkg.com/alpinejs"></script>
 </body>
 

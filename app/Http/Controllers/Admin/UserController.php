@@ -1,10 +1,11 @@
 <?php
+
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\User\StoreUserRequest;
 use App\Http\Requests\Admin\User\UpdateUserRequest;
-use App\Models\PortFolio;
+use App\Models\Portfolio;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -50,26 +51,26 @@ class UserController extends Controller
     {
         DB::transaction(function () use ($request) {
             $user = User::create([
-                'name'       => trim($request->name),
-                'email'      => strtolower(trim($request->email)),
-                'password'   => $request->password,
-                'role'       => 'admin',
+                'name' => trim($request->name),
+                'email' => strtolower(trim($request->email)),
+                'password' => $request->password,
+                'role' => 'admin',
                 'created_by' => auth()->id(),
-                'is_active'  => $request->boolean('is_active'),
+                'is_active' => $request->boolean('is_active'),
             ]);
 
-            PortFolio::create([
-                'user_id'                 => $user->id,
-                'slug'                    => $this->generateUniquePortfolioSlug($user->name),
-                'portfolio_title'         => $user->name . "'s Portfolio",
-                'full_name'               => $user->name,
-                'email'                   => $user->email,
-                'status'                  => 'draft',
-                'is_public'               => false,
-                'template_key'            => 'premium_modern',
+            Portfolio::create([
+                'user_id' => $user->id,
+                'slug' => $this->generateUniquePortfolioSlug($user->name),
+                'portfolio_title' => $user->name."'s Portfolio",
+                'full_name' => $user->name,
+                'email' => $user->email,
+                'status' => 'draft',
+                'is_public' => false,
+                'template_key' => 'premium_modern',
                 'resume_download_enabled' => true,
-                'contact_form_enabled'    => true,
-                'show_social_links'       => true,
+                'contact_form_enabled' => true,
+                'show_social_links' => true,
             ]);
         });
 
@@ -92,10 +93,10 @@ class UserController extends Controller
         $email = strtolower(trim($request->email));
 
         $data = [
-            'name'      => trim($request->name),
-            'email'     => $email,
+            'name' => trim($request->name),
+            'email' => $email,
             'is_active' => $request->boolean('is_active'),
-            'role'      => 'admin',
+            'role' => 'admin',
         ];
 
         if ($user->email !== $email) {
@@ -111,8 +112,8 @@ class UserController extends Controller
 
             if ($user->portfolio) {
                 $user->portfolio->update([
-                    'full_name'               => $user->name,
-                    'email'                   => $user->email,
+                    'full_name' => $user->name,
+                    'email' => $user->email,
                     'last_content_updated_at' => now(),
                 ]);
             }
@@ -163,11 +164,11 @@ class UserController extends Controller
             $baseSlug = 'portfolio';
         }
 
-        $slug    = $baseSlug;
+        $slug = $baseSlug;
         $counter = 1;
 
         while (Portfolio::query()->where('slug', $slug)->exists()) {
-            $slug = $baseSlug . '-' . $counter;
+            $slug = $baseSlug.'-'.$counter;
             $counter++;
         }
 

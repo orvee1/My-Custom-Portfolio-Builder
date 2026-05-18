@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\PortFolio;
+use App\Models\Portfolio;
 use App\Models\User;
-use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -13,7 +13,7 @@ class DashboardController extends Controller
 {
     public function __invoke(): View
     {
-        $authUser = auth()->user();
+        $authUser = Auth::user();
 
         if ($authUser->isSuperAdmin()) {
             $stats = [
@@ -23,7 +23,7 @@ class DashboardController extends Controller
                 ],
                 [
                     'label' => 'Published Portfolios',
-                    'value' => PortFolio::query()->where('status', 'published')->count(),
+                    'value' => Portfolio::query()->where('status', 'published')->count(),
                 ],
                 [
                     'label' => 'Uploaded Resumes',
@@ -35,7 +35,7 @@ class DashboardController extends Controller
                 ],
             ];
         } else {
-            $portfolio = PortFolio::query()
+            $portfolio = Portfolio::query()
                 ->select('id', 'status', 'is_public')
                 ->where('user_id', $authUser->id)
                 ->first();

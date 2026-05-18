@@ -1,12 +1,12 @@
 <?php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class PortFolio extends Model
+class Portfolio extends Model
 {
     use SoftDeletes;
 
@@ -50,13 +50,13 @@ class PortFolio extends Model
     protected function casts(): array
     {
         return [
-            'is_public' => 'boolean',
-            'published_at' => 'datetime',
-            'highlight_stats' => 'array',
-            'theme_settings' => 'array',
+            'is_public'               => 'boolean',
+            'published_at'            => 'datetime',
+            'highlight_stats'         => 'array',
+            'theme_settings'          => 'array',
             'resume_download_enabled' => 'boolean',
-            'contact_form_enabled' => 'boolean',
-            'show_social_links' => 'boolean',
+            'contact_form_enabled'    => 'boolean',
+            'show_social_links'       => 'boolean',
             'last_content_updated_at' => 'datetime',
         ];
     }
@@ -64,5 +64,80 @@ class PortFolio extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function isPublished(): bool
+    {
+        return $this->status === 'published' && $this->is_public;
+    }
+
+    public function publicUrl(): string
+    {
+        return route('public.portfolios.show', $this->slug);
+    }
+
+    public function socialLinks(): HasMany
+    {
+        return $this->hasMany(PortfolioSocialLink::class, 'portfolio_id')
+            ->orderBy('sort_order');
+    }
+
+    public function enabledSocialLinks(): HasMany
+    {
+        return $this->hasMany(PortfolioSocialLink::class, 'portfolio_id')
+            ->where('is_enabled', true)
+            ->orderBy('sort_order');
+    }
+
+    public function projects(): HasMany
+    {
+        return $this->hasMany(PortfolioProject::class, 'portfolio_id')
+            ->orderBy('sort_order');
+    }
+
+    public function enabledProjects(): HasMany
+    {
+        return $this->hasMany(PortfolioProject::class, 'portfolio_id')
+            ->where('is_enabled', true)
+            ->orderBy('sort_order');
+    }
+
+    public function experiences(): HasMany
+    {
+        return $this->hasMany(PortfolioExperience::class, 'portfolio_id')
+            ->orderBy('sort_order');
+    }
+
+    public function enabledExperiences(): HasMany
+    {
+        return $this->hasMany(PortfolioExperience::class, 'portfolio_id')
+            ->where('is_enabled', true)
+            ->orderBy('sort_order');
+    }
+
+    public function educations(): HasMany
+    {
+        return $this->hasMany(PortfolioEducation::class, 'portfolio_id')
+            ->orderBy('sort_order');
+    }
+
+    public function enabledEducations(): HasMany
+    {
+        return $this->hasMany(PortfolioEducation::class, 'portfolio_id')
+            ->where('is_enabled', true)
+            ->orderBy('sort_order');
+    }
+
+    public function skills(): HasMany
+    {
+        return $this->hasMany(PortfolioSkill::class, 'portfolio_id')
+            ->orderBy('sort_order');
+    }
+
+    public function enabledSkills(): HasMany
+    {
+        return $this->hasMany(PortfolioSkill::class, 'portfolio_id')
+            ->where('is_enabled', true)
+            ->orderBy('sort_order');
     }
 }
